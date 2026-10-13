@@ -1,7 +1,8 @@
 # Network Traffic Analysis Tool
 
 <p align="center">
-  <a href="brag-output/brag.mp4"><img src="brag-output/brag.jpg" alt="Watch the launch video" width="720"></a>
+  <img src="brag-output/brag.gif" alt="Launch video" width="720">
+  <br><sub><a href="brag-output/brag.mp4">Watch full video</a> (with soundtrack)</sub>
 </p>
 
 A real-time packet analysis tool integrated with **TShark** that captures and inspects live network traffic, flags anomalies using rule-based detection, and visualizes results through an interactive dashboard.
