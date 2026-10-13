@@ -1,0 +1,2 @@
+Network Traffic Analysis Tool
+Real-time packet capture, powered by TShark — live TCP/UDP/DNS/TLS traffic, rule-based anomaly detection, and an interactive dashboard.

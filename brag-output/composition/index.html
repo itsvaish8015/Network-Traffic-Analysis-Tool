@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Network Traffic Analysis Tool — Launch Brag</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #04070d;
+      }
+      #root {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+        color: #f4f7fb;
+      }
+
+      /* persistent ops background */
+      .bg {
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(1200px 700px at 50% 42%, #12304f 0%, #071022 55%, #04070d 100%);
+      }
+      .grid {
+        position: absolute;
+        inset: -2px;
+        background-image:
+          linear-gradient(to right, rgba(53, 163, 255, 0.08) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(53, 163, 255, 0.08) 1px, transparent 1px);
+        background-size: 80px 80px;
+        mask-image: radial-gradient(1200px 700px at 50% 45%, #000 30%, transparent 80%);
+        -webkit-mask-image: radial-gradient(1200px 700px at 50% 45%, #000 30%, transparent 80%);
+      }
+
+      .scene {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+      }
+      .inner {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+      }
+
+      /* packets */
+      .pkt {
+        position: absolute;
+        width: 16px;
+        height: 16px;
+        border-radius: 4px;
+        background: #35a3ff;
+        box-shadow: 0 0 16px rgba(53, 163, 255, 0.9);
+      }
+      .pkt.g { background: #34d07a; box-shadow: 0 0 16px rgba(52, 208, 122, 0.9); }
+      .pkt.r { background: #ff5a5a; box-shadow: 0 0 18px rgba(255, 90, 90, 0.95); }
+
+      /* Scene 1 */
+      .hook-line {
+        font-size: 132px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        line-height: 1.02;
+        text-transform: uppercase;
+      }
+      .hook-line.accent { color: #35a3ff; text-shadow: 0 0 40px rgba(53, 163, 255, 0.45); }
+
+      /* Scene 2 */
+      .badge {
+        font-size: 26px;
+        font-weight: 700;
+        letter-spacing: 0.42em;
+        text-transform: uppercase;
+        color: #8fd0ff;
+        border: 1px solid rgba(53, 163, 255, 0.5);
+        border-radius: 999px;
+        padding: 14px 30px;
+        margin-bottom: 40px;
+      }
+      .reveal-title {
+        font-size: 128px;
+        font-weight: 900;
+        line-height: 0.98;
+        letter-spacing: -0.025em;
+        text-transform: uppercase;
+      }
+      .reveal-title span { display: block; }
+      .reveal-title span:nth-child(2) { color: #35a3ff; }
+      .sub {
+        margin-top: 34px;
+        font-size: 36px;
+        color: #b9c6d6;
+        font-weight: 400;
+      }
+      .uline {
+        margin-top: 34px;
+        width: 360px;
+        height: 5px;
+        background: linear-gradient(90deg, #35a3ff, #34d07a);
+        transform-origin: left center;
+      }
+
+      /* Scene 3 */
+      .eyebrow {
+        font-size: 30px;
+        font-weight: 700;
+        letter-spacing: 0.4em;
+        text-transform: uppercase;
+        color: #35a3ff;
+        margin-bottom: 48px;
+      }
+      .chips { display: flex; gap: 30px; }
+      .chip {
+        font-size: 58px;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+        color: #dcefff;
+        padding: 26px 54px;
+        border-radius: 20px;
+        background: rgba(53, 163, 255, 0.12);
+        border: 1px solid rgba(53, 163, 255, 0.65);
+        box-shadow: 0 0 34px rgba(53, 163, 255, 0.22) inset;
+      }
+      .caption {
+        margin-top: 56px;
+        font-size: 34px;
+        color: #b9c6d6;
+        font-weight: 400;
+        max-width: 1300px;
+      }
+
+      /* Scene 4 */
+      .stat {
+        display: flex;
+        align-items: baseline;
+        font-weight: 900;
+        letter-spacing: -0.03em;
+        line-height: 1;
+      }
+      .stat #s4num { font-size: 320px; }
+      .stat .pct { font-size: 160px; color: #35a3ff; margin-left: 8px; }
+      .statlabel {
+        margin-top: 4px;
+        font-size: 52px;
+        font-weight: 600;
+        letter-spacing: 0.34em;
+        text-transform: uppercase;
+        color: #8fd0ff;
+      }
+
+      /* Scene 5 dashboard */
+      .dash {
+        width: 1180px;
+        background: #f0f4f8;
+        border-radius: 26px;
+        padding: 34px 40px 30px;
+        box-shadow: 0 40px 120px rgba(0, 0, 0, 0.55);
+        color: #1a2433;
+        text-align: left;
+      }
+      .dash-title {
+        font-size: 40px;
+        font-weight: 800;
+        color: #0b3d91;
+        margin-bottom: 8px;
+      }
+      .dash-row { display: flex; gap: 40px; align-items: stretch; }
+      .chart {
+        flex: 1;
+        background: #ffffff;
+        border-radius: 16px;
+        padding: 22px 22px 16px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+      }
+      .chart h4, .netmap h4 {
+        font-size: 20px;
+        font-weight: 700;
+        color: #5a6b80;
+        margin-bottom: 14px;
+        letter-spacing: 0.04em;
+      }
+      .bars {
+        display: flex;
+        align-items: flex-end;
+        gap: 34px;
+        height: 300px;
+        padding-left: 10px;
+      }
+      .bargroup { display: flex; flex-direction: column; align-items: center; flex: 1; height: 100%; justify-content: flex-end; }
+      .bar {
+        width: 100%;
+        border-radius: 8px 8px 0 0;
+        background: #007bff;
+        transform-origin: bottom center;
+      }
+      .bargroup span { margin-top: 10px; font-size: 20px; font-weight: 700; color: #33475f; }
+      .netmap {
+        width: 470px;
+        background: #ffffff;
+        border-radius: 16px;
+        padding: 22px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+      }
+      .netmap svg { width: 100%; height: 300px; display: block; }
+      .link { stroke: #9fb3c8; stroke-width: 2; fill: none; stroke-dasharray: 400; stroke-dashoffset: 400; }
+      .node { fill: #007bff; }
+      .nlabel { fill: #4a5b70; font-size: 13px; font-family: Inter, system-ui, sans-serif; }
+      .dash-stats {
+        display: flex;
+        gap: 46px;
+        margin-top: 22px;
+        font-size: 24px;
+        font-weight: 700;
+        color: #33475f;
+      }
+      .dash-stats b { color: #007bff; }
+
+      /* Scene 6 */
+      .outro-title {
+        font-size: 120px;
+        font-weight: 900;
+        line-height: 1.0;
+        letter-spacing: -0.02em;
+        text-transform: uppercase;
+      }
+      .outro-title span { display: block; }
+      .outro-title span:nth-child(2) { color: #35a3ff; }
+      .outro-tag {
+        margin-top: 30px;
+        font-size: 40px;
+        color: #cfe0f2;
+        font-weight: 400;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="20.5" data-width="1920" data-height="1080">
+      <div class="bg"><div class="grid"></div></div>
+
+      <!-- Scene 1 — Hook -->
+      <section class="scene clip" id="s1" data-start="0" data-duration="3.5" data-track-index="1">
+        <div class="inner" id="s1-inner">
+          <div class="pkt" id="p1" style="top: 150px"></div>
+          <div class="pkt g" id="p2" style="top: 230px"></div>
+          <div class="pkt" id="p3" style="top: 320px"></div>
+          <div class="pkt r" id="p4" style="top: 740px"></div>
+          <div class="pkt g" id="p5" style="top: 840px"></div>
+          <div class="pkt" id="p6" style="top: 930px"></div>
+          <div class="hook-line" id="hook1">Your network</div>
+          <div class="hook-line accent" id="hook2">is talking.</div>
+        </div>
+      </section>
+
+      <!-- Scene 2 — Reveal -->
+      <section class="scene clip" id="s2" data-start="3.5" data-duration="3.5" data-track-index="2">
+        <div class="inner" id="s2-inner">
+          <div class="badge" id="s2badge">Real-Time Packet Analyzer</div>
+          <h1 class="reveal-title">
+            <span id="s2t1">Network Traffic</span>
+            <span id="s2t2">Analysis Tool</span>
+          </h1>
+          <div class="sub" id="s2sub">Real-time packet capture, powered by TShark.</div>
+          <div class="uline" id="s2line"></div>
+        </div>
+      </section>
+
+      <!-- Scene 3 — Live capture -->
+      <section class="scene clip" id="s3" data-start="7" data-duration="3.5" data-track-index="3">
+        <div class="inner" id="s3-inner">
+          <div class="eyebrow" id="s3eyebrow">Live Capture</div>
+          <div class="chips">
+            <span class="chip" id="chip1">TCP</span>
+            <span class="chip" id="chip2">UDP</span>
+            <span class="chip" id="chip3">DNS</span>
+            <span class="chip" id="chip4">TLS</span>
+          </div>
+          <div class="caption" id="s3cap">Captures live traffic across TCP, UDP, DNS, and TLS.</div>
+        </div>
+      </section>
+
+      <!-- Scene 4 — Anomaly detection -->
+      <section class="scene clip" id="s4" data-start="10.5" data-duration="3.5" data-track-index="4">
+        <div class="inner" id="s4-inner">
+          <div class="eyebrow" id="s4eyebrow">Rule-Based Anomaly Detection</div>
+          <div class="stat"><span id="s4num">0</span><span class="pct">%</span></div>
+          <div class="statlabel" id="s4label">anomaly rate</div>
+          <div class="caption" id="s4sub">2 anomalies flagged across 20 captured packets.</div>
+        </div>
+      </section>
+
+      <!-- Scene 5 — Dashboard -->
+      <section class="scene clip" id="s5" data-start="14" data-duration="3.4" data-track-index="5">
+        <div class="inner" id="s5-inner">
+          <div class="eyebrow" id="s5eyebrow">Interactive Dashboard</div>
+          <div class="dash" id="dash">
+            <div class="dash-title">Summary Statistics</div>
+            <div class="dash-row">
+              <div class="chart">
+                <h4>Packets by Type</h4>
+                <div class="bars">
+                  <div class="bargroup"><div class="bar" id="bar1" style="height: 34%"></div><span>TCP</span></div>
+                  <div class="bargroup"><div class="bar" id="bar2" style="height: 52%"></div><span>UDP</span></div>
+                  <div class="bargroup"><div class="bar" id="bar3" style="height: 68%"></div><span>DNS</span></div>
+                  <div class="bargroup"><div class="bar" id="bar4" style="height: 88%"></div><span>TLS</span></div>
+                </div>
+              </div>
+              <div class="netmap">
+                <h4>Traffic Network Map</h4>
+                <svg viewBox="0 0 430 300" aria-label="Force-directed network map of packet sources and destinations">
+                  <line class="link" id="lk1" x1="70" y1="60" x2="200" y2="40" />
+                  <line class="link" id="lk2" x1="200" y1="40" x2="340" y2="90" />
+                  <line class="link" id="lk3" x1="70" y1="60" x2="150" y2="210" />
+                  <line class="link" id="lk4" x1="150" y1="210" x2="330" y2="230" />
+                  <line class="link" id="lk5" x1="340" y1="90" x2="330" y2="230" />
+                  <line class="link" id="lk6" x1="200" y1="40" x2="150" y2="210" />
+                  <circle class="node" id="n1" cx="70" cy="60" r="11" />
+                  <circle class="node" id="n2" cx="200" cy="40" r="13" />
+                  <circle class="node" id="n3" cx="340" cy="90" r="10" />
+                  <circle class="node" id="n4" cx="150" cy="210" r="12" />
+                  <circle class="node" id="n5" cx="330" cy="230" r="10" />
+                  <text class="nlabel" id="nl2" x="216" y="36">192.168.1.10</text>
+                  <text class="nlabel" id="nl4" x="166" y="216">10.0.0.5</text>
+                  <text class="nlabel" id="nl5" x="346" y="236">172.16.0.9</text>
+                </svg>
+              </div>
+            </div>
+            <div class="dash-stats">
+              <span>Total Packets: <b>20</b></span>
+              <span>Total Anomalies: <b>2</b></span>
+              <span>Anomaly Rate: <b>10%</b></span>
+            </div>
+          </div>
+          <div class="caption" id="s5cap">Chart.js bar chart + D3.js force-directed network map.</div>
+        </div>
+      </section>
+
+      <!-- Scene 6 — Outro -->
+      <section class="scene clip" id="s6" data-start="17.4" data-duration="3.1" data-track-index="6">
+        <div class="inner" id="s6-inner">
+          <div class="outro-title">
+            <span id="s6t1">Network Traffic</span>
+            <span id="s6t2">Analysis Tool</span>
+          </div>
+          <div class="outro-tag" id="s6tag">See every packet. Miss nothing.</div>
+          <div class="uline" id="s6line"></div>
+        </div>
+      </section>
+
+      <audio id="music" data-start="0" data-duration="20.5" data-track-index="20" data-volume="1"
+        src="assets/music/happy-beats-business-moves-vol-12-by-ende-dot-app.mp3"></audio>
+      <audio id="sfx-1" data-start="0.15" data-duration="0.12" data-track-index="21" data-volume="0.7"
+        src="assets/sfx/impact/impactSoft_medium_000.ogg"></audio>
+      <audio id="sfx-2" data-start="3.7" data-duration="1.2" data-track-index="22" data-volume="0.65"
+        src="assets/sfx/impact/impactBell_heavy_000.ogg"></audio>
+      <audio id="sfx-3" data-start="7.62" data-duration="0.11" data-track-index="23" data-volume="0.6"
+        src="assets/sfx/interface/drop_001.ogg"></audio>
+      <audio id="sfx-4" data-start="8.17" data-duration="0.19" data-track-index="24" data-volume="0.6"
+        src="assets/sfx/interface/drop_002.ogg"></audio>
+      <audio id="sfx-5" data-start="8.74" data-duration="0.19" data-track-index="25" data-volume="0.7"
+        src="assets/sfx/interface/drop_003.ogg"></audio>
+      <audio id="sfx-6" data-start="10.9" data-duration="0.12" data-track-index="26" data-volume="0.65"
+        src="assets/sfx/impact/impactMetal_medium_002.ogg"></audio>
+      <audio id="sfx-7" data-start="14.7" data-duration="0.19" data-track-index="27" data-volume="0.65"
+        src="assets/sfx/impact/impactSoft_medium_001.ogg"></audio>
+      <audio id="sfx-8" data-start="17.45" data-duration="0.30" data-track-index="28" data-volume="0.7"
+        src="assets/sfx/impact/impactBell_heavy_004.ogg"></audio>
+    </div>
+
+    <script>
+      const tl = gsap.timeline({ paused: true });
+
+      /* Scene 1 — hook */
+      tl.fromTo("#music", { volume: 0 }, { volume: 0.35, duration: 0.8, ease: "power2.out" }, 0);
+      tl.fromTo("#p1", { x: -80 }, { x: 2000, duration: 2.6, ease: "none", repeat: 2 }, 0);
+      tl.fromTo("#p2", { x: -140 }, { x: 2000, duration: 3.3, ease: "none", repeat: 2 }, 0);
+      tl.fromTo("#p3", { x: -60 }, { x: 2000, duration: 2.1, ease: "none", repeat: 2 }, 0);
+      tl.fromTo("#p4", { x: 2000 }, { x: -80, duration: 2.9, ease: "none", repeat: 2 }, 0);
+      tl.fromTo("#p5", { x: 2000 }, { x: -140, duration: 3.6, ease: "none", repeat: 2 }, 0);
+      tl.fromTo("#p6", { x: 2000 }, { x: -60, duration: 2.3, ease: "none", repeat: 2 }, 0);
+      tl.fromTo("#hook1", { y: 46, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: "power3.out" }, 0.2);
+      tl.fromTo("#hook2", { y: 46, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: "power3.out" }, 0.9);
+      tl.to("#s1-inner", { opacity: 0, duration: 0.4, ease: "power2.in" }, 3.1);
+
+      /* Scene 2 — reveal */
+      tl.fromTo("#s2-inner", { opacity: 0 }, { opacity: 1, duration: 0.4 }, 3.5);
+      tl.fromTo("#s2badge", { y: -22, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: "power3.out" }, 3.7);
+      // beat-grid: title near beat 3.82s
+      tl.fromTo("#s2t1", { y: 54, opacity: 0 }, { y: 0, opacity: 1, duration: 0.8, ease: "power3.out" }, 3.82);
+      tl.fromTo("#s2t2", { y: 54, opacity: 0 }, { y: 0, opacity: 1, duration: 0.8, ease: "power3.out" }, 4.05);
+      tl.fromTo("#s2sub", { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: "power2.out" }, 4.6);
+      tl.fromTo("#s2line", { scaleX: 0 }, { scaleX: 1, duration: 0.6, ease: "power3.inOut" }, 4.7);
+      tl.to("#s2-inner", { opacity: 0, duration: 0.4, ease: "power2.in" }, 6.6);
+
+      /* Scene 3 — live capture */
+      tl.fromTo("#s3-inner", { opacity: 0 }, { opacity: 1, duration: 0.4 }, 7.0);
+      tl.fromTo("#s3eyebrow", { y: -18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: "power2.out" }, 7.2);
+      // beat-grid: chips snap to beats 7.64, 8.19, 8.74, 9.29 (8.74 is a strong cue — beat-locked)
+      tl.fromTo("#chip1", { y: 34, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45, ease: "power3.out" }, 7.64);
+      tl.fromTo("#chip2", { y: 34, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45, ease: "power3.out" }, 8.19);
+      tl.fromTo("#chip3", { y: 34, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45, ease: "power3.out" }, 8.74);
+      tl.fromTo("#chip4", { y: 34, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45, ease: "power3.out" }, 9.29);
+      tl.fromTo("#s3cap", { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: "power2.out" }, 9.6);
+      tl.to("#s3-inner", { opacity: 0, duration: 0.4, ease: "power2.in" }, 10.1);
+
+      /* Scene 4 — anomaly detection */
+      tl.fromTo("#s4-inner", { opacity: 0 }, { opacity: 1, duration: 0.4 }, 10.5);
+      tl.fromTo("#s4eyebrow", { y: -18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: "power2.out" }, 10.7);
+      const statProxy = { v: 0 };
+      const numEl = document.getElementById("s4num");
+      // beat-locked: stat settles toward strong cue 10.93s
+      tl.to(statProxy, {
+        v: 10,
+        duration: 0.7,
+        ease: "power2.out",
+        onUpdate: () => { numEl.textContent = Math.round(statProxy.v); }
+      }, 10.93);
+      tl.fromTo("#s4num", { y: 30 }, { y: 0, duration: 0.7, ease: "power3.out" }, 10.93);
+      tl.fromTo("#s4label", { opacity: 0 }, { opacity: 1, duration: 0.5 }, 11.4);
+      tl.fromTo("#s4sub", { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: "power2.out" }, 12.0);
+      tl.to("#s4-inner", { opacity: 0, duration: 0.4, ease: "power2.in" }, 13.6);
+
+      /* Scene 5 — dashboard */
+      tl.fromTo("#s5-inner", { opacity: 0 }, { opacity: 1, duration: 0.4 }, 14.0);
+      tl.fromTo("#s5eyebrow", { y: -18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: "power2.out" }, 14.2);
+      tl.fromTo("#dash", { scale: 0.94 }, { scale: 1, duration: 0.6, ease: "power3.out" }, 14.73);
+      // beat-grid: bars and nodes arrive on the pulse
+      tl.fromTo("#bar1", { scaleY: 0 }, { scaleY: 1, duration: 0.5, ease: "power3.out" }, 15.29);
+      tl.fromTo("#bar2", { scaleY: 0 }, { scaleY: 1, duration: 0.5, ease: "power3.out" }, 15.41);
+      tl.fromTo("#bar3", { scaleY: 0 }, { scaleY: 1, duration: 0.5, ease: "power3.out" }, 15.53);
+      tl.fromTo("#bar4", { scaleY: 0 }, { scaleY: 1, duration: 0.5, ease: "power3.out" }, 15.65);
+      tl.fromTo(["#n1", "#n2", "#n3", "#n4", "#n5"], { opacity: 0 }, { opacity: 1, duration: 0.4, stagger: 0.08, ease: "power2.out" }, 15.29);
+      tl.fromTo(["#lk1", "#lk2", "#lk3", "#lk4", "#lk5", "#lk6"], { strokeDashoffset: 400 }, { strokeDashoffset: 0, duration: 0.7, stagger: 0.07, ease: "power2.inOut" }, 15.35);
+      tl.fromTo(["#nl2", "#nl4", "#nl5"], { opacity: 0 }, { opacity: 1, duration: 0.4, stagger: 0.08 }, 15.8);
+      tl.fromTo("#s5cap", { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: "power2.out" }, 16.5);
+      tl.to("#s5-inner", { opacity: 0, duration: 0.4, ease: "power2.in" }, 17.0);
+
+      /* Scene 6 — outro */
+      tl.fromTo("#s6-inner", { opacity: 0 }, { opacity: 1, duration: 0.4 }, 17.4);
+      // beat-locked: title slam toward strong cue 17.47s
+      tl.fromTo("#s6t1", { scale: 1.18, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.6, ease: "power3.out" }, 17.47);
+      tl.fromTo("#s6t2", { scale: 1.18, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.6, ease: "power3.out" }, 17.62);
+      tl.fromTo("#s6tag", { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: "power2.out" }, 18.3);
+      tl.fromTo("#s6line", { scaleX: 0 }, { scaleX: 1, duration: 0.6, ease: "power3.inOut" }, 18.56);
+      tl.to("#music", { volume: 0, duration: 1.1, ease: "power2.in" }, 19.4);
+      tl.to("#s6-inner", { opacity: 0, duration: 0.4, ease: "power2.in" }, 20.1);
+
+      window.__timelines["main"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>
